@@ -1,18 +1,35 @@
 import torch
 from tools.class_evaluator import Evaluator
+from tqdm import tqdm
 
 @torch.no_grad()
-def validate(model, dataloader):
+def validate(model, dataloader, loss_func):
+    print('va')
     p = []
     r = []
     f = []
-    for _, data in enumerate(dataloader):
+    class_loss_all = []
+    para_loss_all = []
+    for data in tqdm(dataloader):
+        label_paragraph = data['label_paragraph']
+        label_classification = data['label_classification']
+        label_shape = data['label_shape']
         semantic_embedding = data['semantic_embedding']
         mask = data['mask']
-
         output = model(text_embedding=semantic_embedding, mask=mask)
-        gt = get_gt(data)
-        hy = get_hy(output, data)
+        classifi_result = output['classification']
+        paragraph_logits = output['paragraph_logits']
+        classifi_loss, para_loss = loss_func(label_para=label_paragraph, label_shape=label_shape,
+                                             label_classi=label_classification,
+                                             classification=classifi_result,
+                                             paragraph_logits=paragraph_logits)
+        class_loss_all.append(classifi_loss)
+        para_loss_all.append(para_loss)
+        try:
+            gt = get_gt(data)
+            hy = get_hy(output, data)
+        except:
+            continue
 
         for index in range(len(gt)):
             obj = Evaluator(pre=hy[index], label=gt[index])
@@ -20,12 +37,13 @@ def validate(model, dataloader):
             r.append(obj.get_r_value())
             f.append(2*obj.get_p_value()*obj.get_r_value()
                      / (obj.get_p_value()+obj.get_r_value()))
-    print(p)
-    print(r)
-    print(f)
+
+    print(sum(class_loss_all) / len(class_loss_all))
+    print(sum(para_loss_all) / len(para_loss_all))
+    # print(p)
+    # print(r)
+    # print(f)
     print(sum(f) / len(f))
-
-
 
 def get_gt(data):
     '''
@@ -35,12 +53,10 @@ def get_gt(data):
     label_paragraph = data['label_paragraph']
     label_shape = data['label_shape']
     gt = []
-
     for batch_index in range(label_paragraph.shape[0]):
         row_num, col_num = label_shape[batch_index]
         label_para_real = label_paragraph[batch_index][:row_num, :col_num]
         max_indices = torch.argmax(label_para_real, dim=0)
-
         gt.append(max_indices.tolist())
 
     return gt

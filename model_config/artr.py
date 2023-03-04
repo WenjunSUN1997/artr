@@ -11,15 +11,11 @@ class Artr(torch.nn.Module):
         self.classifi_linear_1 = torch.nn.Linear(in_features=hidd_dim,
                                                  out_features=2048)
         self.classifi_linear_2 = torch.nn.Linear(in_features=2048,
-                                                 out_features=2048)
-        self.classifi_linear_3 = torch.nn.Linear(in_features=2048,
                                                  out_features=2)
 
         self.paragraph_linear_1 = torch.nn.Linear(in_features=hidd_dim,
                                                  out_features=2048)
         self.paragraph_linear_2 = torch.nn.Linear(in_features=2048,
-                                                  out_features=2048)
-        self.paragraph_linear_3 = torch.nn.Linear(in_features=2048,
                                                   out_features=max_len)
 
         self.activation_classifi = torch.nn.ReLU()
@@ -53,9 +49,6 @@ class Artr(torch.nn.Module):
         result_classi = self.classifi_linear_1(query_result)
         result_classi = self.activation_classifi(result_classi)
         result_classi = self.classifi_linear_2(result_classi)
-        result_classi = self.activation_classifi(result_classi)
-        result_classi = self.classifi_linear_3(result_classi)
-        result_classi = self.activation_classifi(result_classi)
         classifi_result = self.softmax(result_classi)
         return classifi_result
 
@@ -67,10 +60,7 @@ class Artr(torch.nn.Module):
         result = self.paragraph_linear_1(query_result)
         result = self.activation_paragraph(result)
         result = self.paragraph_linear_2(result)
-        result = self.activation_paragraph(result)
-        result = self.paragraph_linear_3(result)
         paragraph_logits = self.activation_paragraph(result)
-
         return paragraph_logits
 
     def forward(self, text_embedding, mask):

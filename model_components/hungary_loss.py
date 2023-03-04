@@ -1,16 +1,16 @@
 import torch
 from scipy.optimize import linear_sum_assignment
-import numpy as np
 
 class HungaryLoss(torch.nn.Module):
-    def __init__(self, no_article_weight=0.7, device='cuda:0'):
+    def __init__(self, no_article_weight=0.1, device='cuda:0'):
         super(HungaryLoss, self).__init__()
         self.no_article_weight = no_article_weight
         self.classi_loss = []
         self.para_loss = []
         self.device = device
+        self.no_article_weight = no_article_weight
 
-    def create_label_mask(self, label_para, label_shape):
+    def create_mask_para(self, label_para, label_shape):
         '''
         :param label_para: [b_s, max_len_arti, max_len_para]
         :param label_shape: [b_s, 2] the shape the real label
@@ -22,6 +22,17 @@ class HungaryLoss(torch.nn.Module):
             len_para = label_shape[batch_index][1]
             mask_temp = torch.zeros(max_len_arti, max_len_para)
             mask_temp[:, :len_para] = 1
+            mask.append(mask_temp.to(self.device))
+
+        return mask
+
+    def create_mask_class(self, label_para, label_shape):
+        b_s, max_len_arti, max_len_para = label_para.shape
+        mask = []
+        for batch_index in range(b_s):
+            len_ar = label_shape[batch_index][0]
+            mask_temp = torch.ones(max_len_arti, 2)
+            mask_temp[len_ar:, :] = self.no_article_weight
             mask.append(mask_temp.to(self.device))
 
         return mask
@@ -71,8 +82,10 @@ class HungaryLoss(torch.nn.Module):
         :return: loss
         '''
         b_s, max_len_arti, max_len_para = label_para.shape
-        mask = self.create_label_mask(label_para, label_shape)
-        mask = torch.cat(mask, dim=0)
+        mask_para = self.create_mask_para(label_para, label_shape)
+        mask_para = torch.cat(mask_para, dim=0)
+        mask_class = self.create_mask_class(label_para, label_shape)
+        mask_class = torch.cat(mask_class, dim=0)
         row_list, column_list = self.match(label_para, label_shape, label_classi,
                         classification, paragraph_logits)
         label_para = torch.stack([label_para[x][column_list[x]]
@@ -81,7 +94,7 @@ class HungaryLoss(torch.nn.Module):
                                   for x in range(b_s)], dim=0).view(b_s * max_len_arti, -1)
         paragraph_prob = paragraph_logits.softmax(1).view(b_s * max_len_arti, -1)
         classification = classification.view(b_s * max_len_arti, -1)
-        para_loss = torch.sum(torch.abs(paragraph_prob-label_para)*mask)
-        class_loss = torch.sum(torch.abs(classification-label_classi))
+        para_loss = torch.sum(torch.abs(paragraph_prob-label_para)*mask_para)
+        class_loss = torch.sum(torch.abs(classification-label_classi)*mask_class)
 
         return class_loss, para_loss

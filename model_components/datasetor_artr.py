@@ -6,7 +6,6 @@ from xml_reader import XmlProcessor
 from model_config.tok_no_con import TokBertDiffer
 from model_config.tok_con import TokBertConDiffer
 from transformers import BertModel
-from collections import defaultdict
 
 class TextDataSeter(torch.utils.data.Dataset):
     def __init__(self, xml_path_list, lang, max_len_para, max_len_arti,semantic_dim,
@@ -81,7 +80,6 @@ class TextDataSeter(torch.utils.data.Dataset):
         mask = [False]*len(semantic_embedding_list) + [True]*padding_length
         mask = torch.tensor(mask).to(self.device)
         tensor_pad = torch.zeros(padding_length, self.semantic_dim).to(self.device)
-        print(type(semantic_embedding_list))
         semantic_embedding_padded = torch.cat((semantic_embedding_list,tensor_pad), dim=0)
         return mask, semantic_embedding_padded
 
