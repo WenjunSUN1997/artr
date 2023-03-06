@@ -4,7 +4,6 @@ from tqdm import tqdm
 
 @torch.no_grad()
 def validate(model, dataloader, loss_func):
-    print('va')
     p = []
     r = []
     f = []
@@ -37,13 +36,19 @@ def validate(model, dataloader, loss_func):
             r.append(obj.get_r_value())
             f.append(2*obj.get_p_value()*obj.get_r_value()
                      / (obj.get_p_value()+obj.get_r_value()))
-
+    print('va')
     print(sum(class_loss_all) / len(class_loss_all))
     print(sum(para_loss_all) / len(para_loss_all))
+    all_loss = sum(class_loss_all) / len(class_loss_all) \
+               + sum(para_loss_all) / len(para_loss_all)
     # print(p)
     # print(r)
     # print(f)
-    print(sum(f) / len(f))
+    try:
+        print(sum(f) / len(f))
+    except:
+        print('no article')
+    return all_loss
 
 def get_gt(data):
     '''

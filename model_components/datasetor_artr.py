@@ -90,7 +90,7 @@ class TextDataSeter(torch.utils.data.Dataset):
         label_classifi[:, :1] = 1
         label_classifi[:label.shape[0], 0] = 0
         label_classifi[:label.shape[0], 1] = 1
-        return label.shape, padded_label.to(self.device), label_classifi.to(self.device)
+        return torch.tensor(label.shape), padded_label.to(self.device), label_classifi.to(self.device)
 
     def create_semantic_embdeeing(self, text:list, x, y):
         semantic_embedding_list = []

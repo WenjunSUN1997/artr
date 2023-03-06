@@ -4,12 +4,12 @@ from model_components.validator_artr import validate
 from model_config.artr import Artr
 import argparse
 from model_components import dataloader_artr
-from torch.optim.lr_scheduler import StepLR
+from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau
 
 def train_model(lang, max_len_para, max_len_arti,semantic_dim,
                  device, model_path, model_type):
     torch.autograd.detect_anomaly()
-    LR = 1e-5
+    LR = 5e-5
     epoch = 10000
     class_loss_all = []
     para_loss_all = []
@@ -37,10 +37,10 @@ def train_model(lang, max_len_para, max_len_arti,semantic_dim,
     model.to(device=device)
     model.train()
     optimizer = torch.optim.Adam(params=model.parameters(), lr=LR)
-    scheduler = StepLR(optimizer, step_size=5, gamma=0.9)
+    scheduler = ReduceLROnPlateau(optimizer, mode='min',
+                                  factor=0.2, patience=5, verbose=True)
     loss_func = HungaryLoss(device=device)
     for epoch_num in range(epoch):
-        scheduler.step()
         for step_index, data in enumerate(train_dataloader):
             label_paragraph = data['label_paragraph']
             label_classification = data['label_classification']
@@ -68,14 +68,17 @@ def train_model(lang, max_len_para, max_len_arti,semantic_dim,
         print(sum(para_loss_all) / len(para_loss_all))
         class_loss_all = []
         para_loss_all = []
-        validate(model=model, dataloader=test_dataloader, loss_func=loss_func)
+        val_loss = validate(model=model, dataloader=test_dataloader,
+                            loss_func=loss_func)
+        scheduler.step(val_loss)
         if epoch_num % 300 == 0:
-            torch.save(model.state_dict(), 'model_zoo/artr_'+lang+str(epoch_num)+'.pth')
+            torch.save(model.state_dict(),
+                       'model_zoo/artr_'+lang+str(epoch_num)+'.pth')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--lang", default='fin')
-    parser.add_argument("--batch_size", default=2)
+    parser.add_argument("--batch_size", default=4)
     parser.add_argument("--device", default='cuda:0')
     parser.add_argument("--model_type", default='no_con')
     parser.add_argument("--max_len_para", default=400)
