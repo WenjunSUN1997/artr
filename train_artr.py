@@ -37,8 +37,8 @@ def train_model(lang, max_len_para, max_len_arti,semantic_dim,
     model.to(device=device)
     model.train()
     optimizer = torch.optim.Adam(params=model.parameters(), lr=LR)
-    scheduler = ReduceLROnPlateau(optimizer, mode='min',
-                                  factor=0.2, patience=5, verbose=True)
+    scheduler = ReduceLROnPlateau(optimizer, mode='max',
+                                  factor=0.2, patience=3, verbose=True)
     loss_func = HungaryLoss(device=device)
     for epoch_num in range(epoch):
         for step_index, data in enumerate(train_dataloader):
@@ -68,9 +68,9 @@ def train_model(lang, max_len_para, max_len_arti,semantic_dim,
         print(sum(para_loss_all) / len(para_loss_all))
         class_loss_all = []
         para_loss_all = []
-        val_loss = validate(model=model, dataloader=test_dataloader,
+        val_loss, f = validate(model=model, dataloader=test_dataloader,
                             loss_func=loss_func)
-        scheduler.step(val_loss)
+        scheduler.step(f)
         if epoch_num % 300 == 0:
             torch.save(model.state_dict(),
                        'model_zoo/artr_'+lang+str(epoch_num)+'.pth')

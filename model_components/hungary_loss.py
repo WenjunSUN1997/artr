@@ -85,12 +85,14 @@ class HungaryLoss(torch.nn.Module):
         mask_para = self.create_mask_para(label_para, label_shape)
         mask_para = torch.cat(mask_para, dim=0)
         mask_class = self.create_mask_class(label_para, label_shape)
-        mask_class = torch.cat(mask_class, dim=0)
+        # mask_class = torch.cat(mask_class, dim=0)
         row_list, column_list = self.match(label_para, label_shape, label_classi,
                         classification, paragraph_logits)
         label_para = torch.stack([label_para[x][column_list[x]]
                                   for x in range(b_s)], dim=0).view(b_s * max_len_arti, -1)
         label_classi = torch.stack([label_classi[x][column_list[x]]
+                                  for x in range(b_s)], dim=0).view(b_s * max_len_arti, -1)
+        mask_class = torch.stack([mask_class[x][column_list[x]]
                                   for x in range(b_s)], dim=0).view(b_s * max_len_arti, -1)
         paragraph_prob = paragraph_logits.softmax(1).view(b_s * max_len_arti, -1)
         classification = classification.view(b_s * max_len_arti, -1)

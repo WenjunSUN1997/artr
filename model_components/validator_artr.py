@@ -46,9 +46,11 @@ def validate(model, dataloader, loss_func):
     # print(f)
     try:
         print(sum(f) / len(f))
+        f = sum(f) / len(f)
     except:
         print('no article')
-    return all_loss
+        f = 0
+    return all_loss, f
 
 def get_gt(data):
     '''
@@ -82,7 +84,7 @@ def get_hy(output, label_data):
         _, para_num = label_shape[batch_index]
         _, max_index = torch.max(class_pre_one_batch, dim=1)
         row_selected = torch.where(max_index == 1)[0]
-        para_pre_selected = para_pre_one_batch[row_selected, :para_num]
+        para_pre_selected = para_pre_one_batch[:, :para_num]
         para_prob = torch.softmax(para_pre_selected, dim=0)
         max_indices = torch.argmax(para_prob, dim=0)
         hy.append(max_indices.tolist())

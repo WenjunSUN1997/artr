@@ -4,6 +4,7 @@ class Artr(torch.nn.Module):
     def __init__(self, num_obj_query, hidd_dim, max_len, device):
         super(Artr, self).__init__()
         self.device = device
+        self.normalize = torch.nn.functional.normalize
         self.num_obj_query = num_obj_query
         self.obj_query_embedding = torch.nn.Embedding(num_obj_query, hidd_dim)
         self.ar_transformer = torch.nn.Transformer(d_model=hidd_dim, batch_first=True)
@@ -46,6 +47,7 @@ class Artr(torch.nn.Module):
         :param query_result: output from the decoder [b_s, num_obj_query, hidd_dim]
         :return: classification result [b_s, num_obj_query, 2]
         '''
+        query_result = self.normalize(query_result)
         result_classi = self.classifi_linear_1(query_result)
         result_classi = self.activation_classifi(result_classi)
         result_classi = self.classifi_linear_2(result_classi)
@@ -57,6 +59,7 @@ class Artr(torch.nn.Module):
         :param query_result: output from the decoder [b_s, num_obj_query, hidd_dim]
         :return: classification logits [b_s, num_obj_query, max_len]
         '''
+        query_result = self.normalize(query_result)
         result = self.paragraph_linear_1(query_result)
         result = self.activation_paragraph(result)
         result = self.paragraph_linear_2(result)
@@ -64,6 +67,7 @@ class Artr(torch.nn.Module):
         return paragraph_logits
 
     def forward(self, text_embedding, mask):
+        text_embedding = self.normalize(text_embedding)
         query_result = self.forward_obj_query(text_embedding, mask)
         classifi_result = self.classification(query_result)
         paragraph_logits = self.paragraph_detection(query_result)
